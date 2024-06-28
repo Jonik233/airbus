@@ -19,4 +19,3 @@ For this project, I used the Dice Coefficient and Intersection over Union (IoU) 
 ## Current Results
 - **Public score:** 0.51864
 - **Private score:** 0.75956
-- **Best Validation Result:** F1-score: 0.7848
