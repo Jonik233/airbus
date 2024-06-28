@@ -1,0 +1,6 @@
+weights/
+data.py
+treck_list.txt
+notes.txt
+__pycache__
+.vscode
