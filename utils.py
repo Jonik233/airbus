@@ -1,8 +1,10 @@
 import os
+import cv2
 import shutil
 import numpy as np
 import pandas as pd
 from PIL import Image
+import albumentations
 import matplotlib.pyplot as plt
 
 
@@ -85,3 +87,22 @@ def create_masks(df, img_dir, masks_dir):
         mask_image = Image.fromarray(mask.astype(np.uint8) * 255)
         mask_image_path = os.path.join(masks_dir, f"{os.path.splitext(file_name)[0]}.png")
         mask_image.save(mask_image_path)
+
+
+def read_image(img_path:str, preprocessing_fn:albumentations=None) -> np.ndarray:
+    if os.path.exists(img_path):
+        bgr_image = cv2.imread(img_path)
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+        image = preprocessing_fn(image=rgb_image)["image"] if preprocessing_fn else rgb_image
+        image = np.expand_dims(image, axis=0)
+        return image
+    else:
+        raise FileNotFoundError(f"Could not find {img_path}")
+
+
+def subplot(images:list, title:str) -> None:
+    fig, axes = plt.subplots(nrows=1, ncols=len(images), figsize=(10, 7))
+    for ax, img in zip(axes, images): ax.imshow(img); ax.axis("off")
+    fig.suptitle(title, fontsize=12)
+    plt.subplots_adjust(top=1.4, bottom=0.1, left=0.05, right=0.95, hspace=0.4, wspace=0.3)
+    plt.show()
