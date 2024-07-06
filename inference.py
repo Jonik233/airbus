@@ -2,13 +2,15 @@ import os
 import cv2
 import argparse
 import numpy as np
+import albumentations
 import tensorflow as tf
+from keras import Sequential
 import matplotlib.pyplot as plt
 import segmentation_models as sm
+from keras.layers import Dense, Flatten
+from keras.applications import ResNet50
 from preprocessing import get_preprocessing
-from tensorflow.keras.layers import Dense, Flatten # type: ignore
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.applications import ResNet50 # type: ignore
+from keras.engine.functional import Functional
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
@@ -28,7 +30,7 @@ def iou_c(pd: np.array, gt: np.array):
     return iou
 
 
-def load_models(n_classes=1, activation='sigmoid'):
+def load_models(n_classes:int=1, activation:str='sigmoid') -> tuple:
     BACKBONE = "resnet50"
     preprocess_input = sm.get_preprocessing(BACKBONE)
     preprocessing_fn = get_preprocessing(preprocess_input)
@@ -40,22 +42,14 @@ def load_models(n_classes=1, activation='sigmoid'):
     model2 = sm.Unet(BACKBONE, classes=n_classes, activation=activation)
     model2.load_weights("weights/unet50.h5")
 
-    return preprocessing_fn, model1, model2
+    return (preprocessing_fn, model1, model2)
 
 
-def predict(image_path:str, model1, model2, preprocessing_fn):
-    
-    if os.path.exists(image_path):
-        bgr_image = cv2.imread(image_path)
-        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
-        image = preprocessing_fn(image=rgb_image)["image"]
-        image = np.expand_dims(image, axis=0)
-        presence_prob = model1.predict(image)[0][0]
-        ship_is_present = presence_prob > 0.5
-        prediction = model2.predict(image).squeeze() if ship_is_present else np.zeros((image.shape[1], image.shape[2]))
-        return prediction
-    else:
-        raise FileNotFoundError(f"Could not find {image_path}")
+def predict(image:np.ndarray, model1:Sequential, model2:Functional) -> np.ndarray:
+    presence_prob = model1.predict(image)[0][0]
+    ship_is_present = presence_prob > 0.5
+    prediction = model2.predict(image).squeeze() if ship_is_present else np.zeros((image.shape[1], image.shape[2]))
+    return prediction
 
 
 if __name__ == "__main__":
