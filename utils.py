@@ -106,3 +106,14 @@ def subplot(images:list, title:str) -> None:
     fig.suptitle(title, fontsize=12)
     plt.subplots_adjust(top=1.4, bottom=0.1, left=0.05, right=0.95, hspace=0.4, wspace=0.3)
     plt.show()
+
+
+def rle_to_mask(rle_string:str, shape:tuple) -> np.ndarray:
+    s = rle_string.split()
+    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0::2], s[1::2])]
+    starts -= 1
+    ends = starts + lengths
+    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+    for lo, hi in zip(starts, ends):
+        img[lo:hi] = 1
+    return img.reshape(shape).T  # Needed to align to the original image
