@@ -1,54 +1,12 @@
 import os
 import cv2
+import time
 import shutil
 import numpy as np
 import pandas as pd
 from PIL import Image
 import albumentations
 import matplotlib.pyplot as plt
-
-
-def visualize(**images):
-    n = len(images)
-    plt.figure(figsize=(16, 5))
-    for i, (name, image) in enumerate(images.items()):
-        plt.subplot(1, n, i + 1)
-        plt.xticks([])
-        plt.yticks([])
-        plt.title(' '.join(name.split('_')).title())
-        plt.imshow(image)
-    plt.show()
-
-
-def denormalize(x):
-    x_max = np.percentile(x, 98)
-    x_min = np.percentile(x, 2)    
-    x = (x - x_min) / (x_max - x_min)
-    x = x.clip(0, 1)
-    return x
-
-
-def create_img_dir(df, original_dir, new_dir):
-    errors = 0
-    os.makedirs(new_dir, exist_ok=True)   
-    for file_name in df['ImageId']:
-        source_file = os.path.join(original_dir, file_name)
-        destination_file = os.path.join(new_dir, file_name)
-        # Check if the source file exists and then copy it
-        if os.path.exists(source_file):
-            shutil.copy(source_file, destination_file)
-        else:
-            errors += 1
-            print(f"File not found: {source_file}")
-
-    if errors == 0:
-        print("~"*30)
-        print("FILES COPIED SUCCESSFULLY")
-        print("~"*30)
-    else:
-        print("~"*30)
-        print(f"FILES COPIED WITH {errors} errors")
-        print("~"*30)
        
         
 def rle_to_mask(rle_string, shape):
@@ -100,7 +58,7 @@ def read_image(img_path:str, preprocessing_fn:albumentations=None) -> np.ndarray
         raise FileNotFoundError(f"Could not find {img_path}")
 
 
-def subplot(images:list, title:str) -> None:
+def subplot(images:list, title:str="") -> None:
     fig, axes = plt.subplots(nrows=1, ncols=len(images), figsize=(10, 7))
     for ax, img in zip(axes, images): ax.imshow(img); ax.axis("off")
     fig.suptitle(title, fontsize=12)
@@ -114,6 +72,16 @@ def rle_to_mask(rle_string:str, shape:tuple) -> np.ndarray:
     starts -= 1
     ends = starts + lengths
     img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
-    for lo, hi in zip(starts, ends):
-        img[lo:hi] = 1
+    for lo, hi in zip(starts, ends): img[lo:hi] = 1
     return img.reshape(shape).T  # Needed to align to the original image
+
+
+def benchmark(dataset, num_epochs=2):
+    start_time = time.perf_counter()
+    for epoch_num in range(num_epochs):
+      print(epoch_num+1)
+      for i, (img, mask) in enumerate(dataset):
+          # Performing a training step
+          time.sleep(0.01)
+          if i % 100 == 0: print(f"{i+1}/{len(dataset)}")
+    print("Execution time:", time.perf_counter() - start_time)
