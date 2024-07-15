@@ -23,8 +23,8 @@ For training this model i used dataset that consisted only of samples with ships
 - **Batch Size:** 16
 - **Epochs:** 20
 
-![F1-score during training](f1.png)
-![Loss during training](loss.png)
+![F1-score during training](plots/f1.png)
+![Loss during training](plots/loss.png)
 
 ## Metrics
 val-f1-score: 0.9118
