@@ -1,64 +1,70 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
+
+import time
 import pandas as pd
 import tensorflow as tf
+from data import DataUtils
 import segmentation_models as sm
-from containers import Dataset, DataLoader
-from preprocessing import get_preprocessing, get_training_augmentation, get_validation_augmentation
 
-IMG_DIR = "airbus-ship-detection/train_v2"
-TRAIN_CSV_DIR = "unet_data/train.csv"
-VAL_CSV_DIR = "unet_data/val.csv"
+data_dir = "airbus-ships/ships"  # Image directory
 
-df_train = pd.read_csv(TRAIN_CSV_DIR); df_train.rename(columns={'EncodedPixels': 'Label'}, inplace=True)
-df_val = pd.read_csv(VAL_CSV_DIR); df_train.rename(columns={'EncodedPixels': 'Label'}, inplace=True)
+# Loading ship rle encodings
+df = pd.read_csv("unet_data/encodings.csv")
+encodings = df["EncodedPixels"].tolist()
 
+
+imgs_ds = tf.data.Dataset.list_files(f"{data_dir}/*.jpg", shuffle=False)   # Loading image directory
+masks_ds = tf.data.Dataset.from_tensor_slices(encodings)   # Encodings used to create binary masks
+train_ds = tf.data.Dataset.zip((imgs_ds, masks_ds))   # Zipping images and their encodings
+train_ds, val_ds = DataUtils.split_data(train_ds, 0.8)   # Splitting data
+
+
+### Hyperparameters ###
+EPOCHS = 20
+LR = 6e-5
+BATCH_SIZE = 16
 BACKBONE = "resnet50"
-BATCH_SIZE = 22
-LR = 1e-4
-EPOCHS = 10
+ACTIVATION = "sigmoid"
+N_CLASSES = 1
+preprocessing_fn = sm.get_preprocessing(BACKBONE)  # Preprocessing function for feature extraction in U-Net model
 
-preprocessing_input = sm.get_preprocessing(BACKBONE)
-preprocessing_fn = get_preprocessing(preprocessing_input)
+# Preparing datasets
+train_ds = DataUtils.prepare_ds(train_ds, BATCH_SIZE, preprocessing_fn)
+val_ds = DataUtils.prepare_ds(val_ds, BATCH_SIZE, preprocessing_fn)
 
-train_dataset = Dataset(IMG_DIR, df_train, preprocessing_fn=preprocessing_fn, mask_mode=True)
-val_dataset = Dataset(IMG_DIR, df_val, preprocessing_fn=preprocessing_fn, mask_mode=True)
+# Loaing model
+model = sm.Unet(BACKBONE, classes=N_CLASSES, activation=ACTIVATION)
 
-train_loader1 = DataLoader(train_dataset, BATCH_SIZE, augmentations=get_training_augmentation())
-val_loader1 = DataLoader(val_dataset, BATCH_SIZE, augmentations=get_validation_augmentation())
-
-train_loader2 = DataLoader(train_dataset, BATCH_SIZE)
-val_loader2 = DataLoader(val_dataset, BATCH_SIZE)
-
-n_classes = 1
-activation = 'sigmoid'
-model = sm.Unet(BACKBONE, classes=n_classes, activation=activation)
-
-optim = tf.keras.optimizers.Adam(LR)
+# Model compilation
+optimizer = tf.keras.optimizers.Adam(LR)
 dice_loss = sm.losses.DiceLoss()
-metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
-model.compile(optim, dice_loss, metrics)
+metrics = sm.metrics.FScore(threshold=0.5)
+model.compile(optimizer, dice_loss, metrics)
 
+# Setting callbacks
 callbacks = [
-    tf.keras.callbacks.ModelCheckpoint('./weights/unet50.h5', save_weights_only=True, save_best_only=True, mode='min'),
-    tf.keras.callbacks.ReduceLROnPlateau(patience=3)
+    tf.keras.callbacks.ModelCheckpoint('./weights/test.h5', save_weights_only=True, save_best_only=True, mode='min'),
+    tf.keras.callbacks.ReduceLROnPlateau(patience=3),
+    tf.keras.callbacks.TensorBoard(log_dir="unet_logs", histogram_freq=1)
 ]
 
+
+start = time.perf_counter()
+
+# Training
 history = model.fit(
-    train_loader1, 
-    steps_per_epoch=len(train_loader1), 
+    train_ds,
+    steps_per_epoch=len(train_ds), 
     epochs=EPOCHS, 
     callbacks=callbacks, 
-    validation_data=val_loader1, 
-    validation_steps=len(val_loader1)
+    validation_data=val_ds, 
+    validation_steps=len(val_ds)
 )
 
-history = model.fit(
-    train_loader2, 
-    steps_per_epoch=len(train_loader2), 
-    epochs=EPOCHS, 
-    callbacks=callbacks, 
-    validation_data=val_loader2, 
-    validation_steps=len(val_loader2)
-)
+passed = time.perf_counter() - start
+print(f"\n\nTime passed: {passed}s")
+
+# val_loss: 0.7236 - val_f1-score: 0.3246: 1e-4
+# val_loss: 0.8736 - val_f1-score: 0.3736: 6e-5
