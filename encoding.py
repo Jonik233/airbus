@@ -2,20 +2,25 @@ import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import matplotlib.pyplot as plt
-from inference import predict, load_models
+from data import DataUtils
 from skimage.measure import label, regionprops
+from inference import predict, load_models, get_preprocessing_fn
 
 
-ROOT = "airbus-ship-detection\\test_v2"
+ROOT = "test_v2"
 list_dir = os.listdir(ROOT)
 df = pd.DataFrame(columns=["ImageId", "EncodedPixels"])
-preprocessing_fn, model1, model2 = load_models()
+model1, model2 = load_models()
+preprocessing_fn = get_preprocessing_fn("resnet50")
 
 for i, img_title in enumerate(list_dir):
 
+    # Preparing image
     img_path = os.path.join(ROOT, img_title)
-    pd_mask = predict(img_path, model1, model2, preprocessing_fn)
+    img = DataUtils.prepare_sample(img_path, preprocessing_fn).numpy()
+    
+    # Prediction
+    pd_mask = predict(img, model1, model2)
     pd_mask = tf.where(pd_mask >= 0.5, 1.0, 0.0).numpy()
     print(f"Encoding image {i + 1}/{len(list_dir)}, title: {img_title}")
 
