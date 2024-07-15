@@ -1,66 +1,50 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-import pandas as pd
-from containers import *
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
+
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Flatten # type: ignore
-from tensorflow.keras.optimizers import Adam # type: ignore
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.applications import ResNet50 # type: ignore
-from tensorflow.keras.applications.resnet50 import preprocess_input # type: ignore
-from preprocessing import get_preprocessing
+from data import DataUtils
+from tensorflow import keras
+import segmentation_models as sm
 
-IMG_DIR = "airbus-ship-detection/train_v2"
-TRAIN_CSV_DIR = "resnet50_data/train.csv"
-VAL_CSV_DIR = "resnet50_data/val.csv"
+IMG_DIR = "resnet_imgs"
+CSV_DIR = "resnet50_data/resnet_data.csv"
 
-BATCH_SIZE = 38
-LR = 6e-5
-EPOCHS = 10
+### Hyperparameters ###
+LR = 7e-5
+EPOCHS = 5
+N_CLASSES = 1
+BATCH_SIZE = 8
+ACTIVATION = "sigmoid"
+preprocessing_fn = sm.get_preprocessing("resnet50")
 
-df_train = pd.read_csv(TRAIN_CSV_DIR)
-df_val = pd.read_csv(VAL_CSV_DIR)
+ds = DataUtils.load_data(IMG_DIR, CSV_DIR) # Loading data
+train_ds, val_ds = DataUtils.split_data(ds, 0.8)  # Splitting data
 
-df_train["Label"] = None
-df_val["Label"] = None
+# Preparing data
+train_ds = DataUtils.prepare_ds(train_ds, BATCH_SIZE, preprocessing_fn)
+val_ds = DataUtils.prepare_ds(val_ds, BATCH_SIZE, preprocessing_fn)
 
-train_indxs = df_train["EncodedPixels"].isna()
-val_indxs = df_val["EncodedPixels"].isna()
+# Loading model
+resnet50 = keras.applications.ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+model = keras.Sequential([resnet50, keras.layers.Flatten(), keras.layers.Dense(N_CLASSES, activation=ACTIVATION)])
 
-df_train.loc[train_indxs, "Label"] = 0
-df_train.loc[~train_indxs, "Label"] = 1
+# Compiling model
+optmizer = keras.optimizers.Adam(LR)
+model.compile(optimizer=optmizer, loss="binary_crossentropy", metrics=['accuracy'])
 
-df_val.loc[val_indxs, "Label"] = 0
-df_val.loc[~val_indxs, "Label"] = 1
-
-df_train.drop("EncodedPixels", axis=1, inplace=True)
-df_val.drop("EncodedPixels", axis=1, inplace=True)
-
-preprocessing_input = lambda image, cols, rows: preprocess_input(image)
-preprocessing_fn = get_preprocessing(preprocessing_input)
-train_dataset = Dataset(IMG_DIR, df_train, preprocessing_fn)
-val_dataset = Dataset(IMG_DIR, df_val, preprocessing_fn)
-
-train_loader = DataLoader(train_dataset, BATCH_SIZE)
-val_loader = DataLoader(val_dataset, BATCH_SIZE)
-
-n_classes = 1
-activation = "sigmoid"
-resnet50 = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-model = Sequential([resnet50, Flatten(), Dense(n_classes, activation=activation)])
-model.compile(optimizer=Adam(learning_rate=LR), loss="binary_crossentropy", metrics=['accuracy'])
-
+# Setting callbacks
 callbacks = [
-    tf.keras.callbacks.ModelCheckpoint('./weights/resnet50.h5', save_weights_only=True, save_best_only=True, mode='min'),
+    tf.keras.callbacks.ModelCheckpoint('./weights/r.h5', save_weights_only=True, save_best_only=True, mode='min'),
     tf.keras.callbacks.ReduceLROnPlateau(patience=3)
 ]
 
+# Training
 history = model.fit(
-    train_loader, 
-    steps_per_epoch=len(train_loader), 
+    train_ds, 
+    steps_per_epoch=len(train_ds), 
     epochs=EPOCHS, 
     callbacks=callbacks, 
-    validation_data=val_loader, 
-    validation_steps=len(val_loader)
+    validation_data=val_ds, 
+    validation_steps=len(val_ds)
 )
