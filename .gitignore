@@ -1,6 +1,10 @@
 weights/
-data.py
-treck_list.txt
 notes.txt
 __pycache__
 .vscode
+airbus-ships
+resnet_imgs
+unet_imgs
+cache.data-00000-of-00001
+cache.index
+test_v2
