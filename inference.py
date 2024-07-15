@@ -1,48 +1,33 @@
-import os     
-import cv2
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
+
 import argparse
 import numpy as np
-import albumentations
-import tensorflow as tf
+from data import DataUtils
 from keras import Sequential
 import matplotlib.pyplot as plt
 import segmentation_models as sm
+from typing import Tuple, Callable
 from keras.layers import Dense, Flatten
 from keras.applications import ResNet50
-from preprocessing import get_preprocessing
 from keras.engine.functional import Functional
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
-def dice_c(pd: np.array, gt: np.array):
-    pd = tf.where(pd >= 0.5, 1.0, 0.0).numpy()
-    intersection = np.logical_and(pd, gt).sum()
-    union = pd.sum() + gt.sum()
-    dice = (2 * intersection) / (union + 1e-8)
-    return dice
-
-
-def iou_c(pd: np.array, gt: np.array):
-    pd = tf.where(pd >= 0.5, 1.0, 0.0).numpy()
-    intersection = np.logical_and(pd, gt).sum()
-    union = np.logical_or(pd, gt).sum()
-    iou = intersection / (union + 1e-8)
-    return iou
-
-
-def load_models(n_classes:int=1, activation:str='sigmoid') -> tuple:
-    BACKBONE = "resnet50"
-    preprocess_input = sm.get_preprocessing(BACKBONE)
-    preprocessing_fn = get_preprocessing(preprocess_input)
+def get_preprocessing_fn(model_title:str) -> Callable:
+    preprocessing_fn = sm.get_preprocessing(model_title)
+    return preprocessing_fn
     
+    
+def load_models(n_classes:int=1, activation:str='sigmoid') -> Tuple:
     resnet50 = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
     model1 = Sequential([resnet50, Flatten(), Dense(n_classes, activation=activation)])
-    model1.load_weights("weights/resnet50.h5")
+    model1.load_weights("weights/r.h5")
 
-    model2 = sm.Unet(BACKBONE, classes=n_classes, activation=activation)
-    model2.load_weights("weights/unet50.h5")
+    model2 = sm.Unet("resnet50", classes=n_classes, activation=activation)
+    model2.load_weights("weights/test.h5")
 
-    return (preprocessing_fn, model1, model2)
+    return (model1, model2)
 
 
 def predict(image:np.ndarray, model1:Sequential, model2:Functional) -> np.ndarray:
@@ -57,15 +42,16 @@ if __name__ == "__main__":
     parser.add_argument("img_path", type=str, help="Image file path")
     args = parser.parse_args()
     
-    bgr_image = cv2.imread(args.img_path)
-    rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
-    rgb_image = cv2.resize(rgb_image, (224, 224))
+    img_path = args.img_path
+    model1, model2 = load_models()
+    preprocessing_fn = get_preprocessing_fn("resnet50")
     
-    preprocessing_fn, model1, model2 = load_models()
-    prediction = predict(args.img_path, model1, model2, preprocessing_fn)
+    img = DataUtils.prepare_sample(img_path, preprocessing_fn).numpy()
+    
+    prediction = predict(img, model1, model2)
     
     fig, axs = plt.subplots(1, 2)
-    axs[0].imshow(rgb_image)
+    axs[0].imshow(img[0])
     axs[0].set_title("Ground truth")
     axs[0].axis("off")
     axs[1].imshow(prediction)
