@@ -3,6 +3,7 @@ import errno
 import pandas as pd
 import tensorflow as tf
 from utils import rle_to_mask
+import segmentation_models as sm
 from typing import Callable, Tuple
 from tensorflow import Tensor, data
 
@@ -156,3 +157,13 @@ class DataUtils:
             print(f"{e.strerror}: {e.filename}")
         else:
             return img
+    
+    
+    @staticmethod
+    def get_preprocessing_fn(model_title:str) -> Callable:
+        try:
+            preprocessing_fn = sm.get_preprocessing(model_title)
+        except ValueError as e:
+            print(str(e))
+        else:
+            return preprocessing_fn
