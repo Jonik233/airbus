@@ -22,10 +22,10 @@ def get_preprocessing_fn(model_title:str) -> Callable:
 def load_models(n_classes:int=1, activation:str='sigmoid') -> Tuple:
     resnet50 = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
     model1 = Sequential([resnet50, Flatten(), Dense(n_classes, activation=activation)])
-    model1.load_weights("weights/r.h5")
+    model1.load_weights("weights/resnet50.h5")
 
     model2 = sm.Unet("resnet50", classes=n_classes, activation=activation)
-    model2.load_weights("weights/test.h5")
+    model2.load_weights("weights/unet.h5")
 
     return (model1, model2)
 
