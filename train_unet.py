@@ -21,10 +21,10 @@ preprocessing_fn = sm.get_preprocessing(BACKBONE)
 ds = DataUtils.load_data(IMG_DIR, CSV_DIR) # Loading data
 train_ds, val_ds = DataUtils.split_data(ds, 0.8) # Splitting data
 
-# # Preparing datasets
+# Preparing datasets
 train_ds = DataUtils.prepare_ds(train_ds, BATCH_SIZE, preprocessing_fn, masks=True)
 val_ds = DataUtils.prepare_ds(val_ds, BATCH_SIZE, preprocessing_fn, masks=True)
-    
+
 # Loaing model
 model = sm.Unet(BACKBONE, classes=N_CLASSES, activation=ACTIVATION)
 
