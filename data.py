@@ -1,7 +1,8 @@
+import os
+import errno
 import pandas as pd
 import tensorflow as tf
 from utils import rle_to_mask
-import segmentation_models as sm
 from typing import Callable, Tuple
 from tensorflow import Tensor, data
 
@@ -89,15 +90,17 @@ class Preprocess(tf.keras.layers.Layer):
         Returns:
             Tuple[tf.Tensor, tf.Tensor]: Tensors of dtype=tf.float32
         """
-        imgs = tf.map_fn(tf.io.read_file, file_paths, fn_output_signature=tf.string)
-        imgs = tf.map_fn(self.preprocess_img, imgs, fn_output_signature=tf.float32)
+        try:
+            imgs = tf.map_fn(tf.io.read_file, file_paths, fn_output_signature=tf.string)
         
-        if self.masks: 
-            targets = tf.map_fn(self.get_mask, targets, fn_output_signature=tf.float32)
-        else:
-            targets = tf.cast(targets, tf.float32)
-            
-        return (imgs, targets)
+        except FileNotFoundError as e:
+            print(f"Preprocessing layer | {e.strerror}: {e.filename}")
+
+        else:        
+            imgs = tf.map_fn(self.preprocess_img, imgs, fn_output_signature=tf.float32)
+            if self.masks: targets = tf.map_fn(self.get_mask, targets, fn_output_signature=tf.float32)
+            else: targets = tf.cast(targets, tf.float32)
+            return (imgs, targets)
 
 
 
@@ -106,12 +109,20 @@ class DataUtils:
     
     @staticmethod
     def load_data(imgs_dir:str, csv_dir:str) -> data.Dataset:
-        df = pd.read_csv(csv_dir)
-        labels = df["Label"].tolist()
-        imgs_ds = tf.data.Dataset.list_files(f"{imgs_dir}/*.jpg", shuffle=False)  # Loading image directory
-        labels_ds = tf.data.Dataset.from_tensor_slices(labels)  # Loading labels
-        ds = tf.data.Dataset.zip((imgs_ds, labels_ds))  # Zipping images and their labels
-        return ds
+        try:
+            if not os.path.exists(imgs_dir): 
+                raise FileNotFoundError(os.strerror(errno.ENOENT), imgs_dir)  # Raising error manually in order to avoid further tf errors
+            
+            df = pd.read_csv(csv_dir)
+            labels = df["Label"].tolist()
+            imgs_ds = tf.data.Dataset.list_files(f"{imgs_dir}/*.jpg", shuffle=False)  # Loading image directory
+            labels_ds = tf.data.Dataset.from_tensor_slices(labels)  # Loading labels
+            ds = tf.data.Dataset.zip((imgs_ds, labels_ds))  # Zipping images and their labels
+        
+        except FileNotFoundError as e:
+            print(f"{e.strerror}: {e.filename}")
+        else:
+            return ds
     
     
     @staticmethod
@@ -135,8 +146,13 @@ class DataUtils:
     
     @staticmethod
     def prepare_sample(img_path:str, preprocessing_fn:Callable) -> Tensor:
-        preprocess = Preprocess(preprocessing_fn, False)
-        encoded_img = tf.io.read_file(img_path)
-        img = preprocess.preprocess_img(encoded_img)
-        img = tf.expand_dims(img, axis=0)
-        return img
+        try:
+            preprocess = Preprocess(preprocessing_fn, False)
+            encoded_img = tf.io.read_file(img_path)
+            img = preprocess.preprocess_img(encoded_img)
+            img = tf.expand_dims(img, axis=0)
+            
+        except FileNotFoundError as e:
+            print(f"{e.strerror}: {e.filename}")
+        else:
+            return img
