@@ -4,20 +4,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra wa
 
 import argparse
 import numpy as np
+from typing import Tuple
 from data import DataUtils
 from keras import Sequential
 import matplotlib.pyplot as plt
 import segmentation_models as sm
-from typing import Tuple, Callable
 from keras.layers import Dense, Flatten
 from keras.applications import ResNet50
 from keras.engine.functional import Functional
 
-
-def get_preprocessing_fn(model_title:str) -> Callable:
-    preprocessing_fn = sm.get_preprocessing(model_title)
-    return preprocessing_fn
-    
     
 def load_models(n_classes:int=1, activation:str='sigmoid') -> Tuple:
     resnet50 = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
@@ -44,7 +39,7 @@ if __name__ == "__main__":
     
     img_path = args.img_path
     model1, model2 = load_models()
-    preprocessing_fn = get_preprocessing_fn("resnet50")
+    preprocessing_fn = DataUtils.get_preprocessing_fn("resnet50")
     
     img = DataUtils.prepare_sample(img_path, preprocessing_fn).numpy()
     
