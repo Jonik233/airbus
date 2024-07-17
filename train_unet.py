@@ -3,20 +3,29 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
 
 import tensorflow as tf
+from utils import Config
 from data import DataUtils
+from dotenv import load_dotenv
 import segmentation_models as sm
 
-IMG_DIR = "unet_imgs"
-CSV_DIR = "unet_data\encodings.csv"
+load_dotenv()
+
+# Loading data dirs
+IMG_DIR = os.getenv("UNET_IMG_DIR")
+CSV_DIR = os.getenv("UNET_CSV_DIR")
+CONFIG_DIR = os.getenv("UNET_CONFIG_DIR")
+
+# Loading configuration
+config = Config(CONFIG_DIR).load()
 
 ### Hyperparameters ###
-LR = 6e-5
-EPOCHS = 20
-N_CLASSES = 1
-BATCH_SIZE = 16
-BACKBONE = "resnet50"
-ACTIVATION = "sigmoid"
-preprocessing_fn = sm.get_preprocessing(BACKBONE)
+LR = config["learning_rate"]
+EPOCHS = config["epochs"]
+NUM_CLASSES = config["num_classes"]
+BATCH_SIZE = config["batch_size"]
+BACKBONE = config["backbone"]
+ACTIVATION = config["activation"]
+preprocessing_fn = DataUtils.get_preprocessing_fn(BACKBONE)
 
 ds = DataUtils.load_data(IMG_DIR, CSV_DIR) # Loading data
 train_ds, val_ds = DataUtils.split_data(ds, 0.8) # Splitting data
@@ -26,7 +35,7 @@ train_ds = DataUtils.prepare_ds(train_ds, BATCH_SIZE, preprocessing_fn, masks=Tr
 val_ds = DataUtils.prepare_ds(val_ds, BATCH_SIZE, preprocessing_fn, masks=True)
 
 # Loaing model
-model = sm.Unet(BACKBONE, classes=N_CLASSES, activation=ACTIVATION)
+model = sm.Unet(BACKBONE, classes=NUM_CLASSES, activation=ACTIVATION)
 
 # Model compilation
 optimizer = tf.keras.optimizers.Adam(LR)
@@ -36,9 +45,9 @@ model.compile(optimizer, dice_loss, metrics)
 
 # Setting callbacks
 callbacks = [
-    tf.keras.callbacks.ModelCheckpoint('./weights/test.h5', save_weights_only=True, save_best_only=True, mode='min'),
+    tf.keras.callbacks.ModelCheckpoint(config["weights_path"], save_weights_only=True, save_best_only=True, mode='min'),
     tf.keras.callbacks.ReduceLROnPlateau(patience=3),
-    tf.keras.callbacks.TensorBoard(log_dir="unet_logs", histogram_freq=1)
+    tf.keras.callbacks.TensorBoard(log_dir=config["logs_path"], histogram_freq=1)
 ]
 
 # Training
