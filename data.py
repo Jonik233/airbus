@@ -2,7 +2,7 @@ import os
 import errno
 import pandas as pd
 import tensorflow as tf
-from utils import rle_to_mask
+from utils import Utils
 import segmentation_models as sm
 from typing import Callable, Tuple
 from tensorflow import Tensor, data
@@ -71,7 +71,7 @@ class Preprocess(tf.keras.layers.Layer):
         # Function for eager execution
         def _mask(encoding):
             encoding = encoding.numpy().decode("utf-8")
-            mask = rle_to_mask(encoding, (768, 768))
+            mask = Utils.rle_to_mask(encoding, (768, 768))
             return mask
     
         mask = tf.py_function(_mask, [encoding], tf.float32) # Incorporating mask function for eager use in TensorFlow's computation graph
