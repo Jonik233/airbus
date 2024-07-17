@@ -3,20 +3,29 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
 
 import tensorflow as tf
+from utils import Config
 from data import DataUtils
 from tensorflow import keras
+from dotenv import load_dotenv
 import segmentation_models as sm
 
-IMG_DIR = "resnet_imgs"
-CSV_DIR = "resnet50_data/resnet_data.csv"
+load_dotenv()
+
+# Data directories
+IMG_DIR = os.getenv("RESNET_IMG_DIR")
+CSV_DIR = os.getenv("RESNET_CSV_DIR")
+CONFIG_DIR = os.getenv("RESNET_CONFIG_DIR")
+
+#Loading configuration
+config = Config(CONFIG_DIR).load()
 
 ### Hyperparameters ###
-LR = 7e-5
-EPOCHS = 5
-N_CLASSES = 1
-BATCH_SIZE = 8
-ACTIVATION = "sigmoid"
-preprocessing_fn = sm.get_preprocessing("resnet50")
+LR = config["learning_rate"]
+EPOCHS = config["epochs"]
+NUM_CLASSES = config["num_classes"]
+BATCH_SIZE = config["batch_size"]
+ACTIVATION = config["activation"]
+preprocessing_fn = sm.get_preprocessing(config["preprocessing"])
 
 ds = DataUtils.load_data(IMG_DIR, CSV_DIR) # Loading data
 train_ds, val_ds = DataUtils.split_data(ds, 0.8)  # Splitting data
@@ -27,7 +36,8 @@ val_ds = DataUtils.prepare_ds(val_ds, BATCH_SIZE, preprocessing_fn)
 
 # Loading model
 resnet50 = keras.applications.ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-model = keras.Sequential([resnet50, keras.layers.Flatten(), keras.layers.Dense(N_CLASSES, activation=ACTIVATION)])
+model = keras.Sequential([resnet50, keras.layers.Flatten(), keras.layers.Dense(NUM_CLASSES, activation=ACTIVATION)])
+model.load_weights(config["weights_path"])
 
 # Compiling model
 optmizer = keras.optimizers.Adam(LR)
@@ -35,7 +45,7 @@ model.compile(optimizer=optmizer, loss="binary_crossentropy", metrics=['accuracy
 
 # Setting callbacks
 callbacks = [
-    tf.keras.callbacks.ModelCheckpoint('./weights/r.h5', save_weights_only=True, save_best_only=True, mode='min'),
+    tf.keras.callbacks.ModelCheckpoint(config["weights_path"], save_weights_only=True, save_best_only=True, mode='min'),
     tf.keras.callbacks.ReduceLROnPlateau(patience=3)
 ]
 
