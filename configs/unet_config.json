@@ -1,0 +1,1 @@
+{"activation": "sigmoid", "backbone": "resnet50", "batch_size": 16, "epochs": 20, "learning_rate": 6e-05, "logs_path": "unet_logs", "num_classes": 1, "weights_path": "./weights/unet.h5"}

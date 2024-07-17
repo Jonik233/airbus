@@ -1,0 +1,8 @@
+{"activation": "sigmoid", 
+ "batch_size": 8, 
+ "epochs": 5, 
+ "learning_rate": 7e-05, 
+ "num_classes": 1, 
+ "preprocessing": "resnet50", 
+ "weights_path": "./weights/resnet50.h5"
+}
