@@ -23,8 +23,11 @@ For training this model i used dataset that consisted only of samples with ships
 - **Batch Size:** 16
 - **Epochs:** 20
 
-![alt F1-score during training](plots/f1.png)
-![alt Loss during training](plots/loss.png)
+## Unet training plots
+### F1-Score 
+![F1-Score ](plots/f1.png)
+### Dice Loss
+![Dice Loss](plots/loss.png)
 
 ## Metrics
 - **val-f1-score:** 0.9118
