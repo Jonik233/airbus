@@ -2,7 +2,6 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Setting log level to remove extra warnings
 
-import tensorflow as tf
 from utils import Config
 from data import DataUtils
 from tensorflow import keras
@@ -45,8 +44,8 @@ model.compile(optimizer=optmizer, loss="binary_crossentropy", metrics=['accuracy
 
 # Setting callbacks
 callbacks = [
-    tf.keras.callbacks.ModelCheckpoint(config["weights_path"], save_weights_only=True, save_best_only=True, mode='min'),
-    tf.keras.callbacks.ReduceLROnPlateau(patience=3)
+    keras.callbacks.ModelCheckpoint(config["weights_path"], save_weights_only=True, save_best_only=True, mode='min'),
+    keras.callbacks.ReduceLROnPlateau(patience=3)
 ]
 
 # Training
