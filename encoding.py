@@ -3,15 +3,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from data import DataUtils
+from inference import predict, load_models
 from skimage.measure import label, regionprops
-from inference import predict, load_models, get_preprocessing_fn
 
 
 ROOT = "test_v2"
 list_dir = os.listdir(ROOT)
 df = pd.DataFrame(columns=["ImageId", "EncodedPixels"])
 model1, model2 = load_models()
-preprocessing_fn = get_preprocessing_fn("resnet50")
+preprocessing_fn = DataUtils.get_preprocessing_fn("resnet50")
 
 for i, img_title in enumerate(list_dir):
 
