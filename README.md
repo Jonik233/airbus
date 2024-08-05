@@ -13,7 +13,7 @@ In both validation and training datasets data was equally representable(50% imag
 ## Hyperparameter Tuning for ResNet50
 - **Learning Rate (LR):** 7e-5
 - **Batch Size:** 8
-- **Epochs:** 5
+- **Epochs:** 10
 
 ## Unet training
 For training this model i used dataset that consisted only of samples with ships. Dataset consists of 42556 samples - 34044 for training and 8512 for validation.
