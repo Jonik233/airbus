@@ -1,4 +1,5 @@
-{"activation": "sigmoid", 
+{
+"activation": "sigmoid", 
  "batch_size": 8, 
  "epochs": 5, 
  "learning_rate": 7e-05, 
