@@ -2,8 +2,7 @@ weights/
 notes.txt
 __pycache__
 .vscode
-resnet_imgs
-unet_imgs
+imgs
 cache.data-00000-of-00001
 cache.index
 test_v2
