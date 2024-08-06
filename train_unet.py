@@ -53,8 +53,8 @@ callbacks = [
 # Training
 history = model.fit(
     train_ds,
-    steps_per_epoch=len(train_ds), 
-    epochs=EPOCHS, 
+    steps_per_epoch=len(train_ds),
+    epochs=EPOCHS,
     callbacks=callbacks, 
     validation_data=val_ds, 
     validation_steps=len(val_ds)
