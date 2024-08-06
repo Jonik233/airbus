@@ -34,5 +34,5 @@ For training this model i used dataset that consisted only of samples with ships
 - **val_loss:** 0.0885
 
 ## Current Results in Kaggle
-- **Public score:** 0.51864
-- **Private score:** 0.75956
+- **Public score:** 0.52090
+- **Private score:** 0.76566
