@@ -11,7 +11,7 @@ from tensorflow import Tensor, data
 # Augmentation layer of data pipeline
 class Augment(tf.keras.layers.Layer):
         
-    def __init__(self, masks:bool, seed:int=42, p:float=0.35):
+    def __init__(self, masks:bool, seed:int=42, p:float=0.2):
         super().__init__()
         self.p = p
         self.masks = masks
